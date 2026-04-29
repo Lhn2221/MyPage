@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Dashboard - Nature Edition</title>
+    
+    <!-- 폰트 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- 아이콘 -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <style>
+        /* --- CSS 변수 (글래스모피즘 테마) --- */
+        :root {
+            --glass-bg: rgba(255, 255, 255, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.4);
+            --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            
+            --text-primary: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --accent-color: #222222;
+            
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
+            --transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', 'Noto Sans KR', sans-serif;
+            color: var(--text-primary);
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        button { cursor: pointer; font-family: inherit; border: none; background: none; }
+        ul { list-style: none; }
+
+        /* --- 1. 고정된 자연 배경 --- */
+        .bg-fixed {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            z-index: -1;
+            background-image: url('https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1920&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* 배경 어둡게/밝게 처리 (가독성 확보) */
+        .bg-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: linear-gradient(to bottom, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0.5) 100%);
+            z-index: -1;
+        }
+
+        /* --- 레이아웃 & 글래스모피즘 카드 --- */
+        .main-wrapper {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 4rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            box-shadow: var(--glass-shadow);
+        }
+
+        /* --- 상단 헤드라인 --- */
+        .page-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .page-header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            letter-spacing: -0.04em;
+            color: #111;
+            text-shadow: 0 4px 12px rgba(255,255,255,0.8);
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- 뉴스 섹션 (이모티콘 토글) --- */
+        .news-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        .emoji-btn {
+            font-size: 2.5rem;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.3s;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.15));
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .emoji-btn:hover {
+            transform: scale(1.15) rotate(-5deg);
+            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.2));
+        }
+
+        .expandable-panel {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: var(--transition);
+            width: 100%;
+        }
+        .expandable-panel.show {
+            max-height: 600px;
+            opacity: 1;
+            margin-top: 1rem;
+            overflow-y: auto;
+        }
+
+        .news-tabs { display: flex; gap: 1rem; border-bottom: 1px solid var(--glass-border); margin-bottom: 1rem; }
+        .news-tab { padding: 0.5rem 0; color: var(--text-secondary); font-weight: 600; border-bottom: 2px solid transparent; transition: var(--transition); }
+        .news-tab.active { color: var(--text-primary); border-bottom-color: var(--accent-color); }
+
+        .news-item { display: flex; gap: 1rem; align-items: center; text-decoration: none; padding: 0.7rem; border-radius: var(--radius-sm); transition: background 0.2s; }
+        .news-item:hover { background-color: rgba(255, 255, 255, 0.5); }
+        .news-thumb { width: 60px; height: 60px; border-radius: var(--radius-sm); object-fit: cover; }
+        .news-content { display: flex; flex-direction: column; gap: 0.2rem; }
+        .news-title { color: var(--text-primary); font-weight: 600; font-size: 0.95rem; }
+        .news-time { font-size: 0.75rem; color: var(--text-secondary); }
+
+        /* --- 하단 컨텐츠 레이아웃 (Note + Calendar 상시 노출) --- */
+        .content-row {
+            display: flex;
+            width: 100%;
+            max-width: 950px;
+            gap: 2rem;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        /* --- Note & Inspiration --- */
+        .note-section {
+            flex: 1;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .section-title {
+            font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .selected-date-display { font-size: 0.85rem; color: var(--text-secondary); font-weight: 500; }
+
+        .upload-input {
+            width: 100%; min-height: 120px; padding: 1rem;
+            background: rgba(255, 255, 255, 0.4); border: 1px solid var(--glass-border);
+            border-radius: var(--radius-sm); font-family: inherit; font-size: 1rem;
+            resize: none; outline: none; transition: var(--transition);
+        }
+        .upload-input:focus { background: rgba(255, 255, 255, 0.8); border-color: var(--text-primary); }
+
+        .upload-actions { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+        .file-upload-label { cursor: pointer; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; font-weight: 500; }
+        input[type="file"] { display: none; }
+        .submit-btn { background-color: var(--accent-color); color: white; padding: 0.6rem 1.5rem; border-radius: 20px; font-weight: 600; transition: var(--transition); }
+        .submit-btn:hover { background-color: #000; }
+
+        .feed-container { margin-top: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+        .empty-feed { text-align: center; padding: 2rem; color: var(--text-secondary); font-size: 0.95rem; }
+        .feed-text { font-size: 1rem; margin-bottom: 1rem; white-space: pre-wrap; }
+        .feed-image { width: 100%; border-radius: var(--radius-sm); margin-bottom: 0.5rem; }
+        .feed-meta { font-size: 0.8rem; color: var(--text-secondary); }
+
+        /* --- 캘린더 영역 (항상 노출) --- */
+        .calendar-card {
+            width: 320px;
+            flex-shrink: 0;
+            animation: fadeIn 0.5s ease-out;
+        }
+        .calendar-header { display: flex; justify-content: center; font-weight: 700; margin-bottom: 1rem; font-size: 1.1rem;}
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.3rem; text-align: center; }
+        .calendar-day-name { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        
+        .calendar-date {
+            height: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 0.9rem; border-radius: 50%; cursor: pointer; transition: background 0.2s; position: relative;
+        }
+        .calendar-date:not(.empty):hover { background-color: rgba(255, 255, 255, 0.8); }
+        .calendar-date.today { color: #d32f2f; font-weight: 700; }
+        .calendar-date.selected { background-color: var(--text-primary); color: white; font-weight: 600; }
+        
+        .post-star { position: absolute; bottom: 0px; font-size: 0.5rem; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 스크롤바 커스텀 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.2); border-radius: 10px; }
+
+        /* 반응형 */
+        @media (max-width: 800px) {
+            .content-row { flex-direction: column; align-items: center; gap: 1.5rem; }
+            .calendar-card { width: 100%; max-width: 600px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. 고정된 자연 배경 이미지 -->
+    <div class="bg-fixed"></div>
+    <div class="bg-overlay"></div> <!-- 가독성용 오버레이 -->
+
+    <div class="main-wrapper">
+        
+        <!-- 헤드라인 -->
+        <header class="page-header">
+            <h1>시작해 볼까요?</h1>
+        </header>
+
+        <!-- 3. Daily Headlines (이모티콘 토글 유지) -->
+        <div class="news-wrapper">
+            <button class="emoji-btn" id="news-toggle" title="뉴스 보기">📰</button>
+            
+            <div class="expandable-panel glass-card" id="news-panel">
+                <div class="news-tabs">
+                    <button class="news-tab active" onclick="switchNewsTab('nyt')">New York Times</button>
+                    <button class="news-tab" onclick="switchNewsTab('yonhap')">연합뉴스</button>
+                </div>
+                <div class="news-list" id="news-list">
+                    <!-- JS 렌더링 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 하단 컨텐츠 (노트 + 달력 상시 노출) -->
+        <div class="content-row">
+            
+            <!-- 2. Note & Inspiration -->
+            <div class="note-section glass-card">
+                <div class="section-title">
+                    <span>Note & Inspiration</span>
+                    <span class="selected-date-display" id="selected-date-display"></span>
+                </div>
+                <form id="upload-form">
+                    <textarea class="upload-input" id="post-text" placeholder="오늘 떠오른 영감이나 자연의 감상을 기록해 보세요..." required></textarea>
+                    
+                    <div class="upload-actions">
+                        <label class="file-upload-label" for="post-image">
+                            <i class="ph ph-image" style="font-size: 1.4rem;"></i>
+                            <span id="file-name">사진 첨부</span>
+                            <input type="file" id="post-image" accept="image/*">
+                        </label>
+                        <button type="submit" class="submit-btn">기록 남기기</button>
+                    </div>
+                </form>
+
+                <div class="feed-container" id="feed-container">
+                    <!-- JS 피드 렌더링 -->
+                </div>
+            </div>
+
+            <!-- 4. 달력 영역 (Note 우측에 고정 노출) -->
+            <div class="calendar-card glass-card" id="cal-panel">
+                <div class="calendar-header" id="calendar-header"></div>
+                <div class="calendar-grid" id="calendar-grid">
+                    <div class="calendar-day-name">Sun</div>
+                    <div class="calendar-day-name">Mon</div>
+                    <div class="calendar-day-name">Tue</div>
+                    <div class="calendar-day-name">Wed</div>
+                    <div class="calendar-day-name">Thu</div>
+                    <div class="calendar-day-name">Fri</div>
+                    <div class="calendar-day-name">Sat</div>
+                    <!-- 날짜 렌더링 -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- 뉴스 패널 토글(접기/펴기) ---
+        document.getElementById('news-toggle').addEventListener('click', () => {
+            document.getElementById('news-panel').classList.toggle('show');
+        });
+
+        // --- 날짜 포맷 헬퍼 함수 ---
+        function getFormattedDate(dateObj) {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        }
+
+        // --- 데이터 상태 관리 ---
+        let today = new Date();
+        let selectedDateStr = getFormattedDate(today);
+        let posts =[
+            {
+                date: getFormattedDate(new Date(Date.now() - 86400000)), // 어제
+                text: "아름다운 자연을 보며 기록한 첫 번째 메모입니다.\n오른쪽 달력에서 날짜를 선택해 보세요.",
+                image: null,
+                timeString: "14:30"
+            }
+        ];
+
+        // --- 캘린더 렌더링 ---
+        function renderCalendar() {
+            const year = today.getFullYear();
+            const month = today.getMonth();
+            const todayStr = getFormattedDate(new Date());
+
+            const monthNames =["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById('calendar-header').textContent = `${monthNames[month]} ${year}`;
+
+            const firstDayIndex = new Date(year, month, 1).getDay();
+            const lastDay = new Date(year, month + 1, 0).getDate();
+            const calendarGrid = document.getElementById('calendar-grid');
+            
+            while (calendarGrid.children.length > 7) { calendarGrid.removeChild(calendarGrid.lastChild); }
+
+            for (let i = 0; i < firstDayIndex; i++) {
+                const emptyDiv = document.createElement('div');
+                emptyDiv.classList.add('calendar-date', 'empty');
+                calendarGrid.appendChild(emptyDiv);
+            }
+
+            for (let i = 1; i <= lastDay; i++) {
+                const dateDiv = document.createElement('div');
+                dateDiv.classList.add('calendar-date');
+                
+                const daySpan = document.createElement('span');
+                daySpan.textContent = i;
+                dateDiv.appendChild(daySpan);
+
+                const currentIterDateStr = `${year}-${String(month+1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
+                
+                if (currentIterDateStr === todayStr) dateDiv.classList.add('today');
+                if (currentIterDateStr === selectedDateStr) dateDiv.classList.add('selected');
+
+                if (posts.some(p => p.date === currentIterDateStr)) {
+                    const starSpan = document.createElement('span');
+                    starSpan.textContent = '⭐';
+                    starSpan.classList.add('post-star');
+                    dateDiv.appendChild(starSpan);
+                }
+
+                dateDiv.addEventListener('click', () => {
+                    selectedDateStr = currentIterDateStr;
+                    renderCalendar();
+                    renderFeed();
+                });
+
+                calendarGrid.appendChild(dateDiv);
+            }
+        }
+
+        // --- 피드(Note) 렌더링 ---
+        function renderFeed() {
+            document.getElementById('selected-date-display').textContent = `(${selectedDateStr})`;
+            const feedContainer = document.getElementById('feed-container');
+            feedContainer.innerHTML = '';
+
+            const filteredPosts = posts.filter(post => post.date === selectedDateStr).reverse();
+
+            if (filteredPosts.length === 0) {
+                feedContainer.innerHTML = `<div class="empty-feed">이 날짜에는 기록된 영감이 없습니다.</div>`;
+                return;
+            }
+
+            filteredPosts.forEach(post => {
+                const postDiv = document.createElement('div');
+                postDiv.classList.add('feed-item');
+                postDiv.style.borderBottom = "1px dashed var(--glass-border)";
+                postDiv.style.paddingBottom = "1rem";
+
+                let innerHTML = `<div class="feed-text">${post.text}</div>`;
+                if (post.image) innerHTML += `<img src="${post.image}" class="feed-image">`;
+                innerHTML += `<div class="feed-meta">${post.timeString}</div>`;
+                postDiv.innerHTML = innerHTML;
+                feedContainer.appendChild(postDiv);
+            });
+        }
+
+        // --- 업로드 처리 ---
+        const fileInput = document.getElementById('post-image');
+        const fileNameDisplay = document.getElementById('file-name');
+
+        fileInput.addEventListener('change', (e) => {
+            fileNameDisplay.textContent = e.target.files.length > 0 ? e.target.files[0].name : "사진 첨부";
+        });
+
+        document.getElementById('upload-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const textContent = document.getElementById('post-text').value;
+            const file = fileInput.files[0];
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) { savePost(textContent, event.target.result); };
+                reader.readAsDataURL(file);
+            } else {
+                savePost(textContent, null);
+            }
+
+            this.reset();
+            fileNameDisplay.textContent = "사진 첨부";
+        });
+
+        function savePost(text, imageUrl) {
+            const now = new Date();
+            const timeString = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+            posts.push({ date: selectedDateStr, text: text, image: imageUrl, timeString: timeString });
+            renderCalendar();
+            renderFeed();
+        }
+
+        // --- 뉴스 데이터 렌더링 ---
+        const newsData = {
+            nyt:[
+                { title: "Global Markets Rally as Tech Stocks Surge", time: "2 hours ago", image: "https://images.unsplash.com/photo-1590283603385-18ff388864b4?auto=format&fit=crop&w=150&q=80" },
+                { title: "A New Approach to Sustainable Architecture", time: "4 hours ago", image: "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=150&q=80" }
+            ],
+            yonhap:[
+                { title: "한국은행, 기준금리 동결 결정... 시장 예상 부합", time: "1시간 전", image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=150&q=80" },
+                { title: "전국 대체로 맑고 포근... 주말부터 다시 비 소식", time: "4시간 전", image: "https://images.unsplash.com/photo-1561484930-998b6a7b22e8?auto=format&fit=crop&w=150&q=80" }
+            ]
+        };
+
+        function switchNewsTab(source) {
+            document.querySelectorAll('.news-tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const newsList = document.getElementById('news-list');
+            newsList.innerHTML = '';
+
+            newsData[source].forEach(news => {
+                const aTag = document.createElement('a');
+                aTag.href = "#";
+                aTag.classList.add('news-item');
+                aTag.onclick = (e) => e.preventDefault();
+                aTag.innerHTML = `
+                    <img src="${news.image}" class="news-thumb">
+                    <div class="news-content">
+                        <span class="news-title">${news.title}</span>
+                        <span class="news-time">${news.time}</span>
+                    </div>
+                `;
+                newsList.appendChild(aTag);
+            });
+        }
+
+        // --- 초기 실행 ---
+        window.onload = () => {
+            renderCalendar();
+            renderFeed();
+            document.querySelector('.news-tab').click();
+        };
+    </script>
+</body>
+</html>
